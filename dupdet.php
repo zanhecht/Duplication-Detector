@@ -53,7 +53,7 @@ Remove numbers: <input type="checkbox" name="removenumbers" value="1"><br/>
 <i>Advanced version (allows uploads):</i><br/>
 <hr/>
 <form enctype="multipart/form-data" name="compareadvanced" action="compare.php" method="post">
-<input type="hidden" name="MAX_FILE_SIZE" value="100000000" />
+<input type="hidden" name="MAX_FILE_SIZE" value="10000000" />
 Document 1 (URL): <input type="text" name="url1" size="120"><br/>
 <i>(or)</i> Document 1 (Upload): <input type="file" name="file1"><br/>
 <br/>
@@ -80,7 +80,7 @@ Remove numbers: <input type="checkbox" name="removenumbers" value="1"><br/>
 
 <p>If you have any questions about Duplication Detector, please contact its author Derrick Coetzee at <a href="http://en.wikipedia.org/wiki/User_talk:Dcoetzee">his talk page on English Wikipedia</a>.</p>
 
-<p>The PHP source for Duplication Detector is available under the <a href="http://www.opensource.org/licenses/bsd-license.php">Simplified BSD License</a>. It does <i>not</i> require Toolserver to run, so feel free to download and use it yourself using your own webserver or <i>php</i> command-line tool. (<a href="../downloads/duplication_detector.tar.gz">.tar.gz</a>) (<a href="../downloads/duplication_detector.zip">.zip</a>) Latest version <a href="https://github.com/wikigit/Duplication-Detector">available from Github</a>.</p>
+<p>The PHP source for Duplication Detector is available under the <a href="http://www.opensource.org/licenses/bsd-license.php">Simplified BSD License</a>. It does <i>not</i> require Toolserver to run, so feel free to download and use it yourself using your own webserver or <i>php</i> command-line tool. (<a href="https://github.com/jamesryanalexander/Duplication-Detector/archive/refs/heads/master.zip">.zip</a>) Latest version <a href="https://github.com/jamesryanalexander/Duplication-Detector">available from Github</a>.</p>
 
 </body>
 </html>
