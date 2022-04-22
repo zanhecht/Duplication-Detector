@@ -34,10 +34,8 @@ header("Expires: Wed, 1 Jan 1997 00:00:00 GMT"); // Date in the past
 $source1 = 'Downloaded';
 if ($_GET['url1']) {
     $name1 = $_GET['url1'];
-    $filecontents1 = wget($_GET['url1']);
 } else if ($_POST['url1']) {
     $name1 = $_POST['url1'];
-    $filecontents1 = wget($_POST['url1']);
 } else if ($_FILES['file1']['tmp_name']) {
     $source1 = 'Uploaded';
     $name1 = $_FILES['file1']['name'];
@@ -48,10 +46,8 @@ if ($_GET['url1']) {
 $source2 = 'Downloaded';
 if ($_GET['url2']) {
     $name2 = $_GET['url2'];
-    $filecontents2 = wget($_GET['url2']);
 } else if ($_POST['url2']) {
     $name2 = $_POST['url2'];
-    $filecontents2 = wget($_POST['url2']);
 } else if ($_FILES['file2']['tmp_name']) {
     $source2 = 'Uploaded';
     $name2 = $_FILES['file2']['name'];
@@ -60,96 +56,126 @@ if ($_GET['url2']) {
     print("<p>No document was specified for Document 2.</p>");
 }
 
+if ($source1 == 'Downloaded' || $source2 == 'Downloaded') { # At least one file was from a URL
+    if ( ($source1 == 'Downloaded' && is_wikimedia($name1)) || ($source2 == 'Downloaded' && is_wikimedia($name2)) ) {
+        # At least one URL is a wikimedia URL
+        if ($source1 == 'Downloaded') {
+            $filecontents1 = wget($name1);
+        }
+        if ($source2 == 'Downloaded') {
+            $filecontents2 = wget($name2);
+        }
+    } else {
+        #A URL was given, but there were no wikimedia URLs
+        print("<p><b>Error:</b> If URLs are used, at least one must be a Wikimedia URL. File download aborted.</p>");
+        $filecontents1="";
+        $filecontents2="";
+    }
+}
+
 $shorturl1 = htmlspecialchars(shorten_url($name1));
 $shorturl2 = htmlspecialchars(shorten_url($name2));
 echo '<html>' . "\r\n";
 echo "<head><title>Duplicate Detector: $shorturl1 x $shorturl2</title></head>\r\n";
 echo '<body>' . "\r\n";
 
-$minwords = $_GET['minwords'] ? $_GET['minwords'] : $_POST['minwords'];
-if (!$minwords || $minwords < 2) { $minwords = 2; }
-$minchars = $_GET['minchars'] ? $_GET['minchars'] : $_POST['minchars'];
-if (!$minchars) { $minchars = 13; }
-$removequotations = $_GET['removequotations'] ? $_GET['removequotations'] : $_POST['removequotations'];
-$removenumbers = $_GET['removenumbers'] ? $_GET['removenumbers'] : $_POST['removenumbers'];
 
-print('<p><i><a href=".">Return to home page</a></i></p>');
-
-print('<p><b>Warning</b>: Duplication Detector may in some cases give no results or incomplete results. This does not necessarily indicate copying has not occurred. Manually examine the source document to verify.</p>');
-
-print("<p>Comparing documents for duplicated text:</p>");
-print('<ul>');
-if (preg_match('/^https?:\/\//', $name1)) {
-    print('<li><a href="' . htmlspecialchars($name1) . '">' . htmlspecialchars($name1) . '</a></li>');
-} else {
-    print('<li>' . htmlspecialchars($name1) . '</li>');
-}
-if (preg_match('/^https?:\/\//', $name2)) {
-    print('<li><a href="' . htmlspecialchars($name2) . '">' . htmlspecialchars($name2) . '</a></li>');
-} else {
-    print('<li>' . htmlspecialchars($name2) . '</li>');
-}
-print('</ul>');
-
-ini_set('display_errors',1);
-error_reporting(E_ALL|E_STRICT);
-
-print("<p>");
-$terms1 = get_terms($name1, $source1, $filecontents1, $removenumbers, $removequotations);
-$terms2 = get_terms($name2, $source2, $filecontents2, $removenumbers, $removequotations);
-# print("terms1: " . join(',', $terms1) . "\n");
-# print("terms2: " . join(',', $terms2) . "\n");
-
-$terms1_posts = compute_posts($terms1, $minwords);
-
-$matches1 = compute_matches($terms1, $terms2, $terms1_posts, $minwords);
-print("Total match candidates found: " . count($matches1) . " (before eliminating redundant matches)</p>");
-print("</p>");
-
-usort($matches1, 'cmp_by_length_desc');
-$already_matched_phrases = (array)null;
-$num_matches = 0;
-$context_words = 30;
-$min_context_words = 6;
-$max_context_words = 20;
-print("<p>Matched phrases:</p>\n");
-foreach ($matches1 as $value) {
-    list($pos1, $pos2, $length, $phrase) = $value;
-    $skip = 0;
-    foreach ($already_matched_phrases as $already_phrase) {
-        if (strpos($already_phrase, $phrase) !== false) {
-            $skip = 1;
-            break;
-        }
+if ($filecontents1 == "" || $filecontents2 == "") {
+    print("<p>Error retrieving files:</p>");
+    print('<ul>');
+    if ($filecontents1 == "") {
+        print(" <li>$name1 is empty or was not loaded.</li>");
     }
-    $characters = strlen($phrase);
-    if (!$skip && $characters >= $minchars) {
-        if ($length > $context_words - $min_context_words) {
-            print("<p><b>$phrase</b>" . " ($length words, $characters characters)</p>");
-        } else {
-            $context_len = ($context_words - $length)/2;
-            if ($context_len * 2 >= $max_context_words) {
-                $context_len = $max_context_words/2;
+    if ($filecontents2 == "") {
+        print(" <li>$name2 is empty or was not loaded.</li>");
+    }
+    print('</ul>');
+} else {
+    print('<p><i><a href="dupdet.php">Return to home page</a></i></p>');
+    
+    $minwords = $_GET['minwords'] ? $_GET['minwords'] : $_POST['minwords'];
+    if (!$minwords || $minwords < 2) { $minwords = 2; }
+    $minchars = $_GET['minchars'] ? $_GET['minchars'] : $_POST['minchars'];
+    if (!$minchars) { $minchars = 13; }
+    $removequotations = $_GET['removequotations'] ? $_GET['removequotations'] : $_POST['removequotations'];
+    $removenumbers = $_GET['removenumbers'] ? $_GET['removenumbers'] : $_POST['removenumbers'];
+
+    print('<p><b>Warning</b>: Duplication Detector may in some cases give no results or incomplete results. This does not necessarily indicate copying has not occurred. Manually examine the source document to verify.</p>');
+
+    print("<p>Comparing documents for duplicated text:</p>");
+    print('<ul>');
+    if (preg_match('/^https?:\/\//', $name1)) {
+        print('<li><a href="' . htmlspecialchars($name1) . '">' . htmlspecialchars($name1) . '</a></li>');
+    } else {
+        print('<li>' . htmlspecialchars($name1) . '</li>');
+    }
+    if (preg_match('/^https?:\/\//', $name2)) {
+        print('<li><a href="' . htmlspecialchars($name2) . '">' . htmlspecialchars($name2) . '</a></li>');
+    } else {
+        print('<li>' . htmlspecialchars($name2) . '</li>');
+    }
+    print('</ul>');
+
+    ini_set('display_errors',1);
+    error_reporting(E_ALL|E_STRICT);
+
+    print("<p>");
+    $terms1 = get_terms($name1, $source1, $filecontents1, $removenumbers, $removequotations);
+    $terms2 = get_terms($name2, $source2, $filecontents2, $removenumbers, $removequotations);
+    # print("terms1: " . join(',', $terms1) . "\n");
+    # print("terms2: " . join(',', $terms2) . "\n");
+
+    $terms1_posts = compute_posts($terms1, $minwords);
+
+    $matches1 = compute_matches($terms1, $terms2, $terms1_posts, $minwords);
+    print("Total match candidates found: " . count($matches1) . " (before eliminating redundant matches)</p>");
+    print("</p>");
+
+    usort($matches1, 'cmp_by_length_desc');
+    $already_matched_phrases = (array)null;
+    $num_matches = 0;
+    $context_words = 30;
+    $min_context_words = 6;
+    $max_context_words = 20;
+    print("<p>Matched phrases:</p>\n");
+    foreach ($matches1 as $value) {
+        list($pos1, $pos2, $length, $phrase) = $value;
+        $skip = 0;
+        foreach ($already_matched_phrases as $already_phrase) {
+            if (strpos($already_phrase, $phrase) !== false) {
+                $skip = 1;
+                break;
             }
-            $phraseprefix1 = join(' ', array_slice($terms1, max($pos1 - $context_len, 0), $pos1 - max($pos1 - $context_len, 0)));
-            $phrasesuffix1 = join(' ', array_slice($terms1, $pos1 + $length, min(count($terms1) - ($pos1 + $length), $context_len)));
-            $phraseprefix2 = join(' ', array_slice($terms2, max($pos2 - $context_len, 0), $pos2 - max($pos2 - $context_len, 0)));
-            $phrasesuffix2 = join(' ', array_slice($terms2, $pos2 + $length, min(count($terms2) - ($pos2 + $length), $context_len)));
-            print("<p>$phraseprefix1 <b>$phrase</b> $phrasesuffix1<br/>");
-            print("$phraseprefix2 <b>$phrase</b> $phrasesuffix2<br/>");
-            print("($length words, $characters characters)</p>");
         }
-        $num_matches++;
+        $characters = strlen($phrase);
+        if (!$skip && $characters >= $minchars) {
+            if ($length > $context_words - $min_context_words) {
+                print("<p><b>$phrase</b>" . " ($length words, $characters characters)</p>");
+            } else {
+                $context_len = ($context_words - $length)/2;
+                if ($context_len * 2 >= $max_context_words) {
+                    $context_len = $max_context_words/2;
+                }
+                $phraseprefix1 = join(' ', array_slice($terms1, max($pos1 - $context_len, 0), $pos1 - max($pos1 - $context_len, 0)));
+                $phrasesuffix1 = join(' ', array_slice($terms1, $pos1 + $length, min(count($terms1) - ($pos1 + $length), $context_len)));
+                $phraseprefix2 = join(' ', array_slice($terms2, max($pos2 - $context_len, 0), $pos2 - max($pos2 - $context_len, 0)));
+                $phrasesuffix2 = join(' ', array_slice($terms2, $pos2 + $length, min(count($terms2) - ($pos2 + $length), $context_len)));
+                print("<p>$phraseprefix1 <b>$phrase</b> $phrasesuffix1<br/>");
+                print("$phraseprefix2 <b>$phrase</b> $phrasesuffix2<br/>");
+                print("($length words, $characters characters)</p>");
+            }
+            $num_matches++;
+        }
+        $already_matched_phrases[] = $phrase;
     }
-    $already_matched_phrases[] = $phrase;
+
+    print("Matching phrases found: " . $num_matches);
 }
 
-print("Matching phrases found: " . $num_matches);
-
-print('<p><i><a href=".">Return to home page</a></i></p>');
+print('<p><i><a href="dupdet.php">Return to home page</a></i></p>');
 
 $time_delta = microtime_float() - $time_start;
-printf('<p><small>This report generated by <a href="http://toolserver.org/~dcoetzee/duplicationdetector/">Duplication Detector</a> at ' . date('c') . ' in %0.2f sec.' . "</small></p>", $time_delta);
+printf('<p><small>This report generated by <a href="http://dupdet.toolforge.org/">Duplication Detector</a> at ' . date('c') . ' in %0.2f sec.' . "</small></p>", $time_delta);
 echo '</body></html>';
 
 function shorten_url($url) {
@@ -213,7 +239,7 @@ function wget($url) {
         // Use user agent "" so Google will let us access their cache
         curl_setopt($ch, CURLOPT_USERAGENT, "");
     } else {
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Duplication Detector (http://toolserver.org/~dcoetzee/duplicationdetector/) Toolserver, author User:Dcoetzee');
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Duplication Detector (http://dupdet.toolforge.org/) Toolserver, author User:Dcoetzee');
     }
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_HEADER, 1);
@@ -251,11 +277,10 @@ function wget($url) {
         $result = curl_exec($ch);
     }
     if ($result === false) {
-        print("<p>Could not load URL " . htmlspecialchars($url) . ": " . curl_error($ch) . "</p>");
+        print("<p><b>Error:</b> Could not load URL " . htmlspecialchars($url) . ": " . curl_error($ch) . "</p>");
         $result = '';
-    }
-    if (strlen($result) < 300) {
-        print("<p>Warning: URL " . htmlspecialchars($url) . " gave short result:\n" . htmlspecialchars($result) . "</p>");
+    } else if (strlen($result) < 300) {
+        print("<p><b>Warning:</b> URL " . htmlspecialchars($url) . " gave short result:\n" . htmlspecialchars($result) . "</p>");
     }
     curl_close($ch);
     return $result;
@@ -374,4 +399,8 @@ function microtime_float()
     return ((float)$usec + (float)$sec);
 }
 
+function is_wikimedia($url)
+{
+    return preg_match("/^(https?:)?\/\/[a-z\-]*\.?(mediawiki|toolforge|wik(i(books|data|[mp]edia|news|quote|source|versity|voyage)|tionary)).org\//i", $url);
+}
 ?>
